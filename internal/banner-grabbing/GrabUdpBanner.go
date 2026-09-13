@@ -7,9 +7,9 @@ import (
 )
 
 // Helper function to grab a service banner
-func GrabTCPBanners(target string, timeout time.Duration) (string, error) {
+func GrabUDPBanner(target string, timeout time.Duration) (string, error) {
 	// Attempts a tcp connection to target and closes when done
-	conn, err := net.DialTimeout("tcp", target, timeout)
+	conn, err := net.DialTimeout("udp", target, timeout)
 	if err != nil {
 		return "", err
 	}
