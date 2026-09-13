@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
+	"sync"
 	"time"
 )
 
@@ -32,14 +34,64 @@ func grabBanner(target string, timeout time.Duration) (string, error) {
 	return string(buf[:n]), nil
 }
 
-func main() {
-	// Grabs the banner
-	banner, err := grabBanner("scanme.nmap.org:22", 3*time.Second)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
+// Function to handle the worker
+func worker(id int, target string, jobs <-chan int, results chan<- string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	// Loops over each port in the ports
+	for port := range jobs {
+		// Converts the port number of a string
+		portNum := strconv.Itoa(port)
+
+		// Builds the target
+		grabTarget := target + ":" + portNum
+
+		// Grabs the banner
+		banner, err := grabBanner(grabTarget, 3*time.Second)
+		if err != nil {
+			continue
+		}
+
+		result := fmt.Sprintf("Port: %d, banner: %s", port, banner)
+
+		// Adds to the results
+		results<-result
 	}
 
-	// Outputs the banner
-	fmt.Printf("Banner Output:\n%s", banner)
+	fmt.Printf("Worker %d finished\n", id)
+}
+
+func main() {
+	// Stores the max number of workers and wait group
+	const numWorkers = 100
+	var wg sync.WaitGroup
+
+	// Builds the channels for storing the ports and the results
+	ports := make(chan int, 65535)
+	results := make(chan string, 65535)
+
+	// Starts the workers
+	for workerId := 1; workerId <= numWorkers; workerId++ {
+		wg.Add(1)
+
+		go worker(workerId, "localhost", ports, results, &wg)
+	}
+
+	// Builds the jobs
+	for port := 1; port <= 65535; port++ {
+		// Adds the port to ports
+		ports <- port
+	}
+	close(ports)
+
+	// Waits for the wait group to finish
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Loops over the results
+	for r := range results {
+		fmt.Println(r)
+	}
 }
