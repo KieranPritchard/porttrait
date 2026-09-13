@@ -1,7 +1,7 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"io"
 	"net"
 	"time"
@@ -30,4 +30,16 @@ func grabBanner(target string, timeout time.Duration) (string, error) {
 
 	// Returns the string from the buffer
 	return string(buf[:n]), nil
+}
+
+func main() {
+	// Grabs the banner
+	banner, err := grabBanner("scanme.nmap.org:22", 3*time.Second)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	// Outputs the banner
+	fmt.Printf("Banner Output:\n%s", banner)
 }
