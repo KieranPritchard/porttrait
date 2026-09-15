@@ -9,7 +9,7 @@ type matchResult struct {
 
 func MatchBanners(banner string) ([]matchResult, error) {
 	// Creates the matches list
-	var matchList []matchResult
+	matchList := make([]matchResult, 0)
 
 	// Brings in the embedded database
 	db, err := LoadAllPrints()
@@ -19,6 +19,7 @@ func MatchBanners(banner string) ([]matchResult, error) {
 
 	// Gets all fo the matches
 	for _, match := range db.MatchAll(banner) {
+
 		// Stores the current match
 		var currentMatch matchResult
 

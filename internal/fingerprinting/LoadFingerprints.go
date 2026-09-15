@@ -8,6 +8,7 @@ import (
 )
 
 // Stores the recog files that are needed
+//go:embed db/* 
 var recogFiles embed.FS
 
 // LoadEmbedded loads a specific embedded fingerprint file by name (e.g. "http_servers.xml").
