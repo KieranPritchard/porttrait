@@ -9,6 +9,10 @@ import (
 	"kpritchard.co.uk/service-fingerprinter/internal/fingerprinting"
 )
 
+// Stores the variables that are needed by the command
+var domain string
+var ports string
+
 // Defines the grab command
 var grabCmd = &cobra.Command{
 	Use: "grab",
@@ -17,7 +21,7 @@ var grabCmd = &cobra.Command{
 	// Handles the logic of the command when called
 	Run: func(cmd *cobra.Command, args []string) {
 		// runs the tcp scanner
-		banner, err := bannergrabbing.GrabTCPBanners("scanme.nmap.org:22", 10*time.Second)
+		banner, err := bannergrabbing.GrabTCPBanners(domain + ":" + ports, 10*time.Second)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -38,5 +42,9 @@ var grabCmd = &cobra.Command{
 }
 
 func init() {
+	grabCmd.Flags().StringVarP(&domain, "domain", "d", "", "Domain to be targeted")
+	grabCmd.Flags().StringVarP(&ports, "ports", "p", "", "Ports to be targeted")
+
+	// Adds the command to the root command
 	rootCmd.AddCommand(grabCmd)
 }
