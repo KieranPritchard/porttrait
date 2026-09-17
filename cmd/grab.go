@@ -22,31 +22,50 @@ var grabCmd = &cobra.Command{
 
 	// Handles the logic of the command when called
 	Run: func(cmd *cobra.Command, args []string) {
+		// Stores the targets
+		var targets = make([]string, 0)
+
 		// Domain regex: RFC 1035 / RFC 1123 compliant label rules
 		var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
-		
+
 		// Checks if there is a domain
 		if domainRegex.MatchString(target) {
-			input.PrepareDomain(target)
-		} 
+			targetList, err := input.PrepareDomain(target)
+			if err != nil {
+				fmt.Println("Error occured: ", err)
+			}
 
-		// runs the tcp scanner
-		banner, err := bannergrabbing.GrabTCPBanners(target + ":" + ports, 10*time.Second)
-		if err != nil {
-			fmt.Println(err)
+			targets = targetList
+		} else {
+			target, err := input.PrepareIP(target)
+			if err != nil {
+				fmt.Println("Error occured: ", err)
+			}
+
+			targets = append(targets, target)
 		}
 
-		fmt.Println(banner)
+		// Loops over each of the targets
+		for _, target := range targets {
 
-		// Attempts to match the banner
-		matches, err := fingerprinting.MatchBanners(banner)
-		if err != nil {
-			fmt.Println(err)
-		}
+			// runs the tcp scanner
+			banner, err := bannergrabbing.GrabTCPBanners(target + ":" + ports, 10*time.Second)
+			if err != nil {
+				fmt.Println(err)
+			}
 
-		// Ouputs each of the matches
-		for match := range matches {
-			fmt.Println(match)
+			fmt.Println(banner)
+
+			// Attempts to match the banner
+			matches, err := fingerprinting.MatchBanners(banner)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			// Ouputs each of the matches
+			for match := range matches {
+				fmt.Println(match)
+			}
 		}
 	},
 }
