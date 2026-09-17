@@ -2,15 +2,17 @@ package cmd
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/spf13/cobra"
 	bannergrabbing "kpritchard.co.uk/service-fingerprinter/internal/banner-grabbing"
 	"kpritchard.co.uk/service-fingerprinter/internal/fingerprinting"
+	"kpritchard.co.uk/service-fingerprinter/internal/input"
 )
 
 // Stores the variables that are needed by the command
-var domain string
+var target string
 var ports string
 
 // Defines the grab command
@@ -20,8 +22,16 @@ var grabCmd = &cobra.Command{
 
 	// Handles the logic of the command when called
 	Run: func(cmd *cobra.Command, args []string) {
+		// Domain regex: RFC 1035 / RFC 1123 compliant label rules
+		var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
+		
+		// Checks if there is a domain
+		if domainRegex.MatchString(target) {
+			input.PrepareDomain(target)
+		} 
+
 		// runs the tcp scanner
-		banner, err := bannergrabbing.GrabTCPBanners(domain + ":" + ports, 10*time.Second)
+		banner, err := bannergrabbing.GrabTCPBanners(target + ":" + ports, 10*time.Second)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -42,7 +52,7 @@ var grabCmd = &cobra.Command{
 }
 
 func init() {
-	grabCmd.Flags().StringVarP(&domain, "domain", "d", "", "Domain to be targeted")
+	grabCmd.Flags().StringVarP(&target, "target", "t", "", "Domain to be targeted")
 	grabCmd.Flags().StringVarP(&ports, "ports", "p", "", "Ports to be targeted")
 
 	// Adds the command to the root command

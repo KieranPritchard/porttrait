@@ -5,7 +5,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
-	"vendor/golang.org/x/net/idna"
+	"golang.org/x/net/idna"
 )
 
 func PrepareDomain(domain string) ([]string, error)  {
