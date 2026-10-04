@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -13,7 +14,7 @@ import (
 
 // Stores the variables that are needed by the command
 var target string
-var port string
+var ports string
 var timeout int
 
 // Defines the grab command
@@ -39,31 +40,43 @@ var grabCmd = &cobra.Command{
 			}
 		}
 
-		// runs the tcp scanner
-		banner, err := bannergrabbing.GrabTCPBanners(target + ":" + port, time.Duration(timeout)*time.Second)
-		if err != nil {
-			fmt.Println(err)
-		}
+		// Checks if there are commas in the ports
+		if strings.Contains(ports, ",") {
+			// Stores the split ports in a variable
+			separatedPorts := strings.Split(ports, ",")
 
-		fmt.Println(banner)
+			// Loops over each of the ports
+			for _, port := range separatedPorts{
+				// Removes the white space from the port
+				port = strings.TrimSpace(port)
+				
+				// runs the tcp scanner
+				banner, err := bannergrabbing.GrabTCPBanners(target + ":" + port, time.Duration(timeout)*time.Second)
+				if err != nil {
+					fmt.Println(err)
+				}
 
-		// Attempts to match the banner
-		matches, err := fingerprinting.MatchBanners(banner)
-		if err != nil {
-			fmt.Println(err)
-		}
+				fmt.Println(banner)
 
-		// Ouputs each of the matches
-		for match := range matches {
-			fmt.Println(match)
+				// Attempts to match the banner
+				matches, err := fingerprinting.MatchBanners(banner)
+				if err != nil {
+					fmt.Println(err)
+				}
+
+				// Ouputs each of the matches
+				for match := range matches {
+					fmt.Println(match)
+				}
+			}
 		}
 	},
 }
 
 func init() {
 	grabCmd.Flags().StringVarP(&target, "target", "t", "", "Domain to be targeted")
-	grabCmd.Flags().StringVarP(&port, "ports", "p", "", "Port to be targeted")
-	grabCmd.Flags().IntVarP(&timeout, "timeout", "t", 0, "Length of timeout")
+	grabCmd.Flags().StringVarP(&ports, "ports", "p", "", "Port to be targeted")
+	grabCmd.Flags().IntVarP(&timeout, "timeout", "t", 10, "Length of timeout")
 
 	// Adds the command to the root command
 	rootCmd.AddCommand(grabCmd)
