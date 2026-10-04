@@ -13,7 +13,8 @@ import (
 
 // Stores the variables that are needed by the command
 var target string
-var ports string
+var port string
+var timeout int
 
 // Defines the grab command
 var grabCmd = &cobra.Command{
@@ -22,57 +23,47 @@ var grabCmd = &cobra.Command{
 
 	// Handles the logic of the command when called
 	Run: func(cmd *cobra.Command, args []string) {
-		// Stores the targets
-		var targets = make([]string, 0)
-
 		// Domain regex: RFC 1035 / RFC 1123 compliant label rules
 		var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
 		// Checks if there is a domain
 		if domainRegex.MatchString(target) {
-			targetList, err := input.PrepareDomain(target)
+			_, err := input.PrepareDomain(target)
 			if err != nil {
 				fmt.Println("Error occured: ", err)
 			}
-
-			targets = targetList
 		} else {
-			target, err := input.PrepareIP(target)
+			_, err := input.PrepareIP(target)
 			if err != nil {
 				fmt.Println("Error occured: ", err)
 			}
-
-			targets = append(targets, target)
 		}
 
-		// Loops over each of the targets
-		for _, target := range targets {
+		// runs the tcp scanner
+		banner, err := bannergrabbing.GrabTCPBanners(target + ":" + port, time.Duration(timeout)*time.Second)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-			// runs the tcp scanner
-			banner, err := bannergrabbing.GrabTCPBanners(target + ":" + ports, 10*time.Second)
-			if err != nil {
-				fmt.Println(err)
-			}
+		fmt.Println(banner)
 
-			fmt.Println(banner)
+		// Attempts to match the banner
+		matches, err := fingerprinting.MatchBanners(banner)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-			// Attempts to match the banner
-			matches, err := fingerprinting.MatchBanners(banner)
-			if err != nil {
-				fmt.Println(err)
-			}
-
-			// Ouputs each of the matches
-			for match := range matches {
-				fmt.Println(match)
-			}
+		// Ouputs each of the matches
+		for match := range matches {
+			fmt.Println(match)
 		}
 	},
 }
 
 func init() {
 	grabCmd.Flags().StringVarP(&target, "target", "t", "", "Domain to be targeted")
-	grabCmd.Flags().StringVarP(&ports, "ports", "p", "", "Ports to be targeted")
+	grabCmd.Flags().StringVarP(&port, "ports", "p", "", "Port to be targeted")
+	grabCmd.Flags().IntVarP(&timeout, "timeout", "t", 0, "Length of timeout")
 
 	// Adds the command to the root command
 	rootCmd.AddCommand(grabCmd)
