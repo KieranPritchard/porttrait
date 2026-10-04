@@ -4,7 +4,7 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 */
 package main
 
-import "kpritchard.co.uk/service-fingerprinter/cmd"
+import "kpritchard.co.uk/porttrait/cmd"
 
 func main() {
 	cmd.Execute()

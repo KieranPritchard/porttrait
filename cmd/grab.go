@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	bannergrabbing "kpritchard.co.uk/service-fingerprinter/internal/banner-grabbing"
-	"kpritchard.co.uk/service-fingerprinter/internal/fingerprinting"
-	"kpritchard.co.uk/service-fingerprinter/internal/input"
+	bannergrabbing "kpritchard.co.uk/porttrait/internal/banner-grabbing"
+	"kpritchard.co.uk/porttrait/internal/fingerprinting"
+	"kpritchard.co.uk/porttrait/internal/input"
 )
 
 // Stores the variables that are needed by the command
