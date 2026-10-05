@@ -15,7 +15,6 @@ import (
 // Stores the variables that are needed by the command
 var target string
 var ports string
-var timeout int
 
 // Defines the grab command
 var grabCmd = &cobra.Command{
@@ -76,7 +75,6 @@ var grabCmd = &cobra.Command{
 func init() {
 	grabCmd.Flags().StringVarP(&target, "target", "t", "", "Domain to be targeted")
 	grabCmd.Flags().StringVarP(&ports, "ports", "p", "", "Port to be targeted")
-	grabCmd.Flags().IntVarP(&timeout, "timeout", "t", 10, "Length of timeout")
 
 	// Adds the command to the root command
 	rootCmd.AddCommand(grabCmd)
