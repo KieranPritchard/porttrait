@@ -43,12 +43,15 @@ var grabCmd = &cobra.Command{
 			// Loops over each of the ports
 			for _, port := range separatedPorts{
 				// Removes the white space from the port
-				port = strings.TrimSpace(port)
+				port, err := input.PreparePort(port)
+				if err != nil {
+					fmt.Println("Error occured: ", err)
+				}
 				
 				// runs the tcp scanner
 				banner, err := bannergrabbing.GrabTCPBanners(target + ":" + port, time.Duration(timeout)*time.Second)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Println("Error occured: ", err)
 				}
 
 				fmt.Println(banner)
@@ -56,7 +59,7 @@ var grabCmd = &cobra.Command{
 				// Attempts to match the banner
 				matches, err := fingerprinting.MatchBanners(banner)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Println("Error occured: ", err)
 				}
 
 				// Ouputs each of the matches
