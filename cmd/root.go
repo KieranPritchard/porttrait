@@ -12,6 +12,8 @@ import (
 
 // Stores the variables that are needed by the commands
 var timeout int
+var target string
+var ports string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -29,15 +31,9 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.service-fingerprinter.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "t", 10, "Length of timeout")
+	rootCmd.PersistentFlags().StringVarP(&target, "target", "t", "", "Domain to be targeted")
+	rootCmd.PersistentFlags().StringVarP(&ports, "ports", "p", "", "Port to be targeted")
 }
 
 

@@ -12,10 +12,6 @@ import (
 	"kpritchard.co.uk/porttrait/internal/input"
 )
 
-// Stores the variables that are needed by the command
-var target string
-var ports string
-
 // Defines the grab command
 var grabCmd = &cobra.Command{
 	Use: "grab",
