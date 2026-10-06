@@ -1,15 +1,15 @@
 package fingerprinting
 
 // Type to store the banner match
-type matchResult struct {
+type MatchResult struct {
 	vender  string
 	service string
 	version string
 }
 
-func MatchBanners(banner string) ([]matchResult, error) {
+func MatchBanners(banner string) ([]MatchResult, error) {
 	// Creates the matches list
-	matchList := make([]matchResult, 0)
+	matchList := make([]MatchResult, 0)
 
 	// Brings in the embedded database
 	db, err := LoadAllPrints()
@@ -21,7 +21,7 @@ func MatchBanners(banner string) ([]matchResult, error) {
 	for _, match := range db.MatchAll(banner) {
 
 		// Stores the current match
-		var currentMatch matchResult
+		var currentMatch MatchResult
 
 		// Builds the current match type
 		currentMatch.vender = match.Values["service.vendor"]
