@@ -67,6 +67,31 @@ var grabCmd = &cobra.Command{
 					fmt.Println(match)
 				}
 			}
+		} else {
+			// Removes the white space from the port
+			port, err := input.PreparePort(ports)
+			if err != nil {
+				fmt.Println("Error occured: ", err)
+			}
+			
+			// runs the tcp scanner
+			banner, err := bannergrabbing.GrabTCPBanners(target + ":" + port, time.Duration(timeout)*time.Second)
+			if err != nil {
+				fmt.Println("Error occured: ", err)
+			}
+
+			fmt.Println(banner)
+
+			// Attempts to match the banner
+			matches, err := fingerprinting.MatchBanners(banner)
+			if err != nil {
+				fmt.Println("Error occured: ", err)
+			}
+
+			// Ouputs each of the matches
+			for match := range matches {
+				fmt.Println(match)
+			}
 		}
 	},
 }
