@@ -4,10 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -18,6 +21,9 @@ import (
 
 // Stores the protocol flag for the scan command (tcp, udp or both)
 var scanProtocol string
+
+// Stores the verbose flag for the scan command
+var scanVerbose bool
 
 // Stores the struct for the scan command
 type ScanResult struct {
@@ -97,6 +103,84 @@ func scanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan s
 	}
 }
 
+// Returns the first line of the banner, shortened to fit the table
+func shortBanner(banner string, max int) string {
+	// Takes the first line only
+	line := strings.TrimSpace(strings.SplitN(strings.TrimSpace(banner), "\n", 2)[0])
+	if line == "" {
+		return "-"
+	}
+
+	// Shortens long lines
+	runes := []rune(line)
+	if len(runes) > max {
+		return string(runes[:max-3]) + "..."
+	}
+	return line
+}
+
+// Returns the service and version columns for a result
+func describeMatches(matches []fingerprinting.MatchResult) (string, string) {
+	if len(matches) == 0 {
+		return "-", "-"
+	}
+
+	// Uses the first match for the table
+	first := matches[0]
+	service := strings.TrimSpace(first.Vendor + " " + first.Product)
+	if service == "" {
+		service = "-"
+	}
+	if len(matches) > 1 {
+		service += fmt.Sprintf(" (+%d)", len(matches)-1)
+	}
+
+	version := first.Version
+	if version == "" {
+		version = "-"
+	}
+
+	return service, version
+}
+
+// Outputs the results as a table
+func printResults(results []ScanResult) {
+	// Creates the table writer
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+
+	// Outputs the header
+	fmt.Fprintln(w, "PORT\tSTATE\tSERVICE\tVERSION\tBANNER")
+
+	// Outputs each of the rows
+	for _, r := range results {
+		service, version := describeMatches(r.Matches)
+		fmt.Fprintf(w, "%s/%s\t%s\t%s\t%s\t%s\n", r.Port, r.Protocol, r.State, service, version, shortBanner(r.Banner, 50))
+	}
+
+	w.Flush()
+}
+
+// Outputs the full banner and every match for each result
+func printVerbose(results []ScanResult) {
+	for _, r := range results {
+		fmt.Printf("\n--- %s/%s ---\n", r.Port, r.Protocol)
+
+		// Outputs the full banner, indented
+		if strings.TrimSpace(r.Banner) == "" {
+			fmt.Println("  (no banner)")
+		} else {
+			for _, line := range strings.Split(strings.TrimSpace(r.Banner), "\n") {
+				fmt.Println("  " + strings.TrimSpace(line))
+			}
+		}
+
+		// Outputs every match
+		for _, m := range r.Matches {
+			fmt.Printf("  match: %s %s %s\n", m.Vendor, m.Product, m.Version)
+		}
+	}
+}
+
 // Runs the worker pool over the given ports and protocols and outputs the results
 func runScan(target string, portList []string, protocols []string, timeout int, showUnresponsive bool) {
 	// Builds a job for each port and protocol
@@ -106,6 +190,10 @@ func runScan(target string, portList []string, protocols []string, timeout int, 
 			jobList = append(jobList, scanJob{Port: port, Protocol: protocol})
 		}
 	}
+
+	// Outputs the scan header
+	fmt.Printf("Scanning %s (%s) - %d ports\n\n", target, strings.Join(protocols, ", "), len(portList))
+	start := time.Now()
 
 	// Keep this below `ulimit -n`
 	numWorkers := 500
@@ -139,13 +227,34 @@ func runScan(target string, portList []string, protocols []string, timeout int, 
 		close(results)
 	}()
 
-	// Only open ports arrive here
+	// Collects every result so they can be sorted before output
+	var found []ScanResult
 	for result := range results {
-		fmt.Println("Port: ", result.Port+"/"+result.Protocol)
-		fmt.Println("State: ", result.State)
-		fmt.Println("Banner: ", result.Banner)
-		fmt.Println("Matches: ", result.Matches)
+		found = append(found, result)
 	}
+
+	// Sorts by port number, then protocol
+	sort.Slice(found, func(i, j int) bool {
+		a, _ := strconv.Atoi(found[i].Port)
+		b, _ := strconv.Atoi(found[j].Port)
+		if a != b {
+			return a < b
+		}
+		return found[i].Protocol < found[j].Protocol
+	})
+
+	// Outputs the results
+	if len(found) == 0 {
+		fmt.Println("No open ports found")
+	} else {
+		printResults(found)
+		if scanVerbose {
+			printVerbose(found)
+		}
+	}
+
+	// Outputs the summary
+	fmt.Printf("\n%d open port(s) found in %s\n", len(found), time.Since(start).Round(time.Millisecond))
 }
 
 // Defines the scan command
@@ -224,6 +333,9 @@ var scanCmd = &cobra.Command{
 func init() {
 	// Adds the protocol flag to the scan command
 	scanCmd.Flags().StringVar(&scanProtocol, "protocol", "both", "Protocol to scan: tcp, udp or both")
+
+	// Adds the verbose flag to the scan command
+	scanCmd.Flags().BoolVarP(&scanVerbose, "verbose", "v", false, "Show the full banner and every match for each port")
 
 	// Adds the command to the root command
 	rootCmd.AddCommand(scanCmd)
