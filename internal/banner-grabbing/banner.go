@@ -34,6 +34,37 @@ func cleanBanner(b []byte) string {
 	return strings.TrimSpace(s)
 }
 
+// Sends a payload over UDP and returns the raw response bytes
+func GrabUDPRaw(target string, payload []byte, timeout time.Duration) ([]byte, error) {
+	// Sets up the udp socket and closes when done
+	conn, err := net.DialTimeout("udp", target, timeout)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	// Sets the deadline for the write and the read
+	_ = conn.SetDeadline(time.Now().Add(timeout))
+
+	// Sends the probe
+	if _, err := conn.Write(payload); err != nil {
+		return nil, err
+	}
+
+	// Reads the response
+	buf := make([]byte, 4096)
+	n, err := conn.Read(buf)
+	if n > 0 {
+		return buf[:n], nil
+	}
+
+	// Timeout means open or filtered, anything else (e.g. ICMP refused) means closed
+	if isTimeout(err) {
+		return nil, ErrNoResponse
+	}
+	return nil, err
+}
+
 // Reads from the connection and returns whatever was received
 func readBanner(conn net.Conn, timeout time.Duration) (string, error) {
 	// Sets the deadline for reading data
