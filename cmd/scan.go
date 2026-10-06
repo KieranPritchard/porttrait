@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	bannergrabbing "kpritchard.co.uk/porttrait/internal/banner-grabbing"
+	banners "kpritchard.co.uk/porttrait/internal/banners"
 	"kpritchard.co.uk/porttrait/internal/fingerprinting"
 	"kpritchard.co.uk/porttrait/internal/input"
 	"kpritchard.co.uk/porttrait/internal/output"
@@ -59,7 +59,7 @@ func scanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan s
 			address := net.JoinHostPort(target, job.Port)
 
 			// Runs the tcp scanner
-			banner, err = bannergrabbing.GrabTCPBanners(address, duration)
+			banner, err = banners.GrabTCPBanners(address, duration)
 			if err == nil {
 				// Attempts to match the banner
 				matches, err = fingerprinting.MatchBanners(banner)

@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	bannergrabbing "kpritchard.co.uk/porttrait/internal/banner-grabbing"
+	banners "kpritchard.co.uk/porttrait/internal/banners"
 	"kpritchard.co.uk/porttrait/internal/fingerprinting"
 )
 
@@ -28,10 +28,10 @@ func scanUDP(target string, port string, timeout time.Duration) (string, []finge
 
 	// Tries each probe for the port until one gets a reply
 	for _, probe := range fingerprinting.UDPProbesFor(port) {
-		resp, err := bannergrabbing.GrabUDPRaw(address, probe.Payload, timeout)
+		resp, err := banners.GrabUDPRaw(address, probe.Payload, timeout)
 
 		// No reply to this probe, so tries the next one
-		if errors.Is(err, bannergrabbing.ErrNoResponse) {
+		if errors.Is(err, banners.ErrNoResponse) {
 			continue
 		}
 

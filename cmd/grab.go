@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	bannergrabbing "kpritchard.co.uk/porttrait/internal/banner-grabbing"
+	"kpritchard.co.uk/porttrait/internal/banners"
 	"kpritchard.co.uk/porttrait/internal/fingerprinting"
 	"kpritchard.co.uk/porttrait/internal/input"
 )
@@ -55,15 +55,15 @@ func grabOne(target string, port string, protocol string, timeout time.Duration)
 
 	// Runs the scanner for the protocol
 	if protocol == "udp" {
-		banner, err = bannergrabbing.GrabUDPBanners(address, timeout)
+		banner, err = banners.GrabUDPBanners(address, timeout)
 
 		// No reply to the probe means the port is open or filtered
-		if errors.Is(err, bannergrabbing.ErrNoResponse) {
+		if errors.Is(err, banners.ErrNoResponse) {
 			result.State = "open|filtered"
 			err = nil
 		}
 	} else {
-		banner, err = bannergrabbing.GrabTCPBanners(address, timeout)
+		banner, err = banners.GrabTCPBanners(address, timeout)
 	}
 
 	// The port was specifically requested, so the failure is kept and shown

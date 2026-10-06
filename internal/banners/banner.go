@@ -1,4 +1,4 @@
-package bannergrabbing
+package banners
 
 import (
 	"errors"
