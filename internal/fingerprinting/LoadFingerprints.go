@@ -3,13 +3,23 @@ package fingerprinting
 import (
 	"embed"
 	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/RumbleDiscovery/recog-go"
 )
 
 // Stores the recog files that are needed
-//go:embed db/* 
+//
+//go:embed db/*
 var recogFiles embed.FS
+
+// Stores the loaded databases, keyed by file name
+var (
+	dbs     map[string]recog.FingerprintDB
+	dbsErr  error
+	dbsOnce sync.Once
+)
 
 // LoadEmbedded loads a specific embedded fingerprint file by name (e.g. "http_servers.xml").
 // name is validated against the embedded FS's own namespace, so path traversal
@@ -22,34 +32,60 @@ func LoadEmbedded(name string) (recog.FingerprintDB, error) {
 	return recog.LoadFingerprintDB(name, data)
 }
 
-// LoadAllEmbedded loads every .xml file under data/ into one merged DB.
-func LoadAllPrints() (recog.FingerprintDB, error) {
-	// Stores all of the directories entries
-	entries, err := recogFiles.ReadDir("db")
-	if err != nil {
-		return recog.FingerprintDB{}, err
-	}
-
-	// Stores the merged files
-	var merged recog.FingerprintDB
-	
-	// Loops over each entry
-	for _, entry := range entries {
-		// Checks if it is a directory
-		if entry.IsDir() {
-			continue
-		}
-
-		// Loads the embeded
-		db, err := LoadEmbedded(entry.Name())
+// LoadAllPrints loads every .xml file under db/ once and keeps them separate
+func LoadAllPrints() (map[string]recog.FingerprintDB, error) {
+	dbsOnce.Do(func() {
+		// Stores all of the directories entries
+		entries, err := recogFiles.ReadDir("db")
 		if err != nil {
-			return recog.FingerprintDB{}, err
+			dbsErr = err
+			return
 		}
 
-		// Merges the fingerprints
-		merged.Fingerprints = append(merged.Fingerprints, db.Fingerprints...)
-	}
+		dbs = make(map[string]recog.FingerprintDB)
 
-	// Returns the merged
-	return merged, nil
+		// Loops over each entry
+		for _, entry := range entries {
+			// Skips directories and non xml files
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".xml") {
+				continue
+			}
+
+			// Loads the embedded file
+			db, err := LoadEmbedded(entry.Name())
+			if err != nil {
+				dbsErr = err
+				return
+			}
+
+			dbs[entry.Name()] = db
+		}
+	})
+
+	return dbs, dbsErr
+}
+
+// Pulls the Server header value out of an HTTP response
+func extractServerHeader(banner string) string {
+	for _, line := range strings.Split(banner, "\n") {
+		line = strings.TrimSpace(line)
+		if len(line) > 7 && strings.EqualFold(line[:7], "server:") {
+			return strings.TrimSpace(line[7:])
+		}
+	}
+	return ""
+}
+
+// Picks the right database and input for the banner
+func selectTarget(banner string) (dbFile string, input string) {
+	switch {
+	case strings.HasPrefix(banner, "HTTP/"):
+		return "http_servers.xml", extractServerHeader(banner)
+	case strings.HasPrefix(banner, "SSH-"):
+		return "ssh_banners.xml", strings.TrimSpace(banner)
+	case strings.HasPrefix(banner, "220"):
+		// FTP and SMTP both greet with 220, so the first line is tried against both
+		return "ftp_banners.xml", strings.TrimSpace(strings.SplitN(banner, "\n", 2)[0])
+	}
+	return "", ""
 }

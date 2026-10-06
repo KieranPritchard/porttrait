@@ -1,35 +1,86 @@
 package fingerprinting
 
+import "strings"
+
 // Type to store the banner match
 type MatchResult struct {
-	vender  string
-	service string
-	version string
+	Vendor  string
+	Product string
+	Version string
+}
+
+// Stores a database file and the input to run against it
+type matchTarget struct {
+	dbFile string
+	input  string
+}
+
+// Works out which databases and inputs apply to the banner
+func selectTargets(banner string) []matchTarget {
+	banner = strings.TrimSpace(banner)
+	firstLine := strings.TrimSpace(strings.SplitN(banner, "\n", 2)[0])
+
+	switch {
+	case strings.HasPrefix(banner, "HTTP/"):
+		return []matchTarget{{"http_servers.xml", extractServerHeader(banner)}}
+	case strings.HasPrefix(banner, "SSH-"):
+		return []matchTarget{{"ssh_banners.xml", firstLine}}
+	case strings.HasPrefix(banner, "220"):
+		// FTP and SMTP both greet with 220, so tries both
+		return []matchTarget{
+			{"ftp_banners.xml", firstLine},
+			{"smtp_banners.xml", firstLine},
+		}
+	}
+
+	return nil
 }
 
 func MatchBanners(banner string) ([]MatchResult, error) {
 	// Creates the matches list
 	matchList := make([]MatchResult, 0)
 
-	// Brings in the embedded database
-	db, err := LoadAllPrints()
+	// Nothing to match against
+	if strings.TrimSpace(banner) == "" {
+		return matchList, nil
+	}
+
+	// Brings in the embedded databases (loaded once)
+	dbs, err := LoadAllPrints()
 	if err != nil {
 		return nil, err
 	}
 
-	// Gets all fo the matches
-	for _, match := range db.MatchAll(banner) {
+	// Loops over each database that applies to this banner
+	for _, target := range selectTargets(banner) {
+		// Skips if there is nothing to match, e.g. no Server header
+		if target.input == "" {
+			continue
+		}
 
-		// Stores the current match
-		var currentMatch MatchResult
+		// Skips if the database wasn't embedded
+		db, ok := dbs[target.dbFile]
+		if !ok {
+			continue
+		}
 
-		// Builds the current match type
-		currentMatch.vender = match.Values["service.vendor"]
-		currentMatch.service = match.Values["service.product"]
-		currentMatch.version = match.Values["service.version"]
+		// Gets all of the matches
+		for _, match := range db.MatchAll(target.input) {
+			// Builds the current match type
+			currentMatch := MatchResult{
+				Vendor:  match.Values["service.vendor"],
+				Product: match.Values["service.product"],
+				Version: match.Values["service.version"],
+			}
 
-		// Adds to the match list
-		matchList = append(matchList, currentMatch)
+			// Skips matches that identified nothing useful
+			if currentMatch.Vendor == "" && currentMatch.Product == "" && currentMatch.Version == "" {
+				continue
+			}
+
+			// Adds to the match list
+			matchList = append(matchList, currentMatch)
+		}
 	}
 
 	return matchList, nil
