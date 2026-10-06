@@ -31,6 +31,12 @@ type UDPProbe struct {
 	Rules   []UDPRule
 }
 
+// Used for any port that has no specific probe
+var genericUDPProbe = UDPProbe{
+	Name:    "generic",
+	Payload: []byte{0x00},
+}
+
 // Turns every byte into the rune with the same value, so \xNN in a pattern
 // matches the byte 0xNN (Go regexes work on UTF-8, which breaks binary matching)
 func toLatin1(b []byte) string {
@@ -54,12 +60,6 @@ func ntpProbe() []byte {
 	p := make([]byte, 48)
 	p[0] = 0x1b
 	return p
-}
-
-// Used for any port that has no specific probe
-var genericUDPProbe = UDPProbe{
-	Name:    "generic",
-	Payload: []byte{0x00},
 }
 
 // Returns the probes to send to a port

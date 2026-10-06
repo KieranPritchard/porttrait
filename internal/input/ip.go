@@ -6,13 +6,17 @@ import (
 	"strings"
 )
 
+// Function to clean and prepare ip addresses
 func PrepareIP(ip string) (string, error)  {
-	// Function to clean and prepare ip addresses
+	if ip == "" {
+		return "", errors.New("IP address cannot be empty")
+	}
 	
 	// Removes write space and lowes the string
 	ip = strings.TrimSpace(ip)
 
-	address, err := netip.ParseAddr("192.168.1.1")
+	// Parses the IP address and checks for errors
+	address, err := netip.ParseAddr(ip)
 	if err != nil {
 		return "", err
 	}
@@ -22,5 +26,6 @@ func PrepareIP(ip string) (string, error)  {
 		return "", errors.New("IP address is not valid")
 	}
 
+	// Returns the IP address
 	return ip, nil
 }

@@ -8,9 +8,12 @@ import (
 	"golang.org/x/net/idna"
 )
 
+// Cleans and validates the domain
 func PrepareDomain(domain string) ([]string, error)  {
-	// Cleans and validates the domain
-
+	if domain == "" {
+		return nil, errors.New("domain cannot be empty")
+	}
+	
 	// Removes write space and lowes the string
 	domain = strings.TrimSpace(strings.ToLower(domain))
 

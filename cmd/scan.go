@@ -3,19 +3,18 @@ package cmd
 import (
 	"fmt"
 	"net"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
 	bannergrabbing "kpritchard.co.uk/porttrait/internal/banner-grabbing"
 	"kpritchard.co.uk/porttrait/internal/fingerprinting"
 	"kpritchard.co.uk/porttrait/internal/input"
+	"kpritchard.co.uk/porttrait/internal/output"
 )
 
 // Stores the protocol flag for the scan command (tcp, udp or both)
@@ -24,15 +23,6 @@ var scanProtocol string
 // Stores the verbose flag for the scan command
 var scanVerbose bool
 
-// Stores the struct for the scan command
-type ScanResult struct {
-	Banner   string
-	Port     string
-	Protocol string
-	State    string
-	Matches  []fingerprinting.MatchResult
-}
-
 // Stores a single unit of work for the workers
 type scanJob struct {
 	Port     string
@@ -40,7 +30,7 @@ type scanJob struct {
 }
 
 // Defines the worker function for the scan command
-func scanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan scanJob, results chan<- ScanResult, wg *sync.WaitGroup) {
+func scanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan scanJob, results chan<- output.ScanResult, wg *sync.WaitGroup) {
 	// Marks the worker as done when the jobs channel is closed
 	defer wg.Done()
 
@@ -86,7 +76,7 @@ func scanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan s
 		}
 
 		// Stores the result of the scan
-		var result ScanResult
+		var result output.ScanResult
 
 		// Adds the banner, port, protocol, state and matches to the result struct
 		result.Banner = banner
@@ -97,84 +87,6 @@ func scanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan s
 
 		// Sends the result to the channel
 		results <- result
-	}
-}
-
-// Returns the first line of the banner, shortened to fit the table
-func shortBanner(banner string, max int) string {
-	// Takes the first line only
-	line := strings.TrimSpace(strings.SplitN(strings.TrimSpace(banner), "\n", 2)[0])
-	if line == "" {
-		return "-"
-	}
-
-	// Shortens long lines
-	runes := []rune(line)
-	if len(runes) > max {
-		return string(runes[:max-3]) + "..."
-	}
-	return line
-}
-
-// Returns the service and version columns for a result
-func describeMatches(matches []fingerprinting.MatchResult) (string, string) {
-	if len(matches) == 0 {
-		return "-", "-"
-	}
-
-	// Uses the first match for the table
-	first := matches[0]
-	service := strings.TrimSpace(first.Vendor + " " + first.Product)
-	if service == "" {
-		service = "-"
-	}
-	if len(matches) > 1 {
-		service += fmt.Sprintf(" (+%d)", len(matches)-1)
-	}
-
-	version := first.Version
-	if version == "" {
-		version = "-"
-	}
-
-	return service, version
-}
-
-// Outputs the results as a table
-func printResults(results []ScanResult) {
-	// Creates the table writer
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-
-	// Outputs the header
-	fmt.Fprintln(w, "PORT\tSTATE\tSERVICE\tVERSION\tBANNER")
-
-	// Outputs each of the rows
-	for _, r := range results {
-		service, version := describeMatches(r.Matches)
-		fmt.Fprintf(w, "%s/%s\t%s\t%s\t%s\t%s\n", r.Port, r.Protocol, r.State, service, version, shortBanner(r.Banner, 50))
-	}
-
-	w.Flush()
-}
-
-// Outputs the full banner and every match for each result
-func printVerbose(results []ScanResult) {
-	for _, r := range results {
-		fmt.Printf("\n--- %s/%s ---\n", r.Port, r.Protocol)
-
-		// Outputs the full banner, indented
-		if strings.TrimSpace(r.Banner) == "" {
-			fmt.Println("  (no banner)")
-		} else {
-			for _, line := range strings.Split(strings.TrimSpace(r.Banner), "\n") {
-				fmt.Println("  " + strings.TrimSpace(line))
-			}
-		}
-
-		// Outputs every match
-		for _, m := range r.Matches {
-			fmt.Printf("  match: %s %s %s\n", m.Vendor, m.Product, m.Version)
-		}
 	}
 }
 
@@ -200,7 +112,7 @@ func runScan(target string, portList []string, protocols []string, timeout int, 
 
 	// Stores the channels for the jobs and the results
 	jobs := make(chan scanJob, numWorkers)
-	results := make(chan ScanResult, numWorkers)
+	results := make(chan output.ScanResult, numWorkers)
 	var wg sync.WaitGroup
 
 	// Starts the workers
@@ -225,7 +137,7 @@ func runScan(target string, portList []string, protocols []string, timeout int, 
 	}()
 
 	// Collects every result so they can be sorted before output
-	var found []ScanResult
+	var found []output.ScanResult
 	for result := range results {
 		found = append(found, result)
 	}
@@ -244,9 +156,9 @@ func runScan(target string, portList []string, protocols []string, timeout int, 
 	if len(found) == 0 {
 		fmt.Println("No open ports found")
 	} else {
-		printResults(found)
+		output.PrintResults(found)
 		if scanVerbose {
-			printVerbose(found)
+			output.PrintVerbose(found)
 		}
 	}
 
