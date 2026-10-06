@@ -31,9 +31,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "t", 10, "Length of timeout")
+	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "T", 10, "Length of timeout")
 	rootCmd.PersistentFlags().StringVarP(&target, "target", "t", "", "Domain to be targeted")
 	rootCmd.PersistentFlags().StringVarP(&ports, "ports", "p", "", "Port to be targeted")
 }
-
-
