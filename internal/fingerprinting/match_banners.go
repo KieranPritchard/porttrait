@@ -1,6 +1,9 @@
 package fingerprinting
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 // Type to store the banner match
 type MatchResult struct {
@@ -16,27 +19,36 @@ type matchTarget struct {
 }
 
 // Works out which databases and inputs apply to the banner
-func selectTargets(banner string) []matchTarget {
+func selectTargets(banner string) ([]matchTarget, error) {
+	if strings.TrimSpace(banner) == "" {
+		return nil, errors.New("banner is empty")
+	}
+
+	// Trims whitespace and takes the first line of the banner
 	banner = strings.TrimSpace(banner)
 	firstLine := strings.TrimSpace(strings.SplitN(banner, "\n", 2)[0])
 
 	switch {
 	case strings.HasPrefix(banner, "HTTP/"):
-		return []matchTarget{{"http_servers.xml", extractServerHeader(banner)}}
+		return []matchTarget{{"http_servers.xml", extractServerHeader(banner)}}, nil
 	case strings.HasPrefix(banner, "SSH-"):
-		return []matchTarget{{"ssh_banners.xml", firstLine}}
+		return []matchTarget{{"ssh_banners.xml", firstLine}}, nil
 	case strings.HasPrefix(banner, "220"):
 		// FTP and SMTP both greet with 220, so tries both
 		return []matchTarget{
 			{"ftp_banners.xml", firstLine},
 			{"smtp_banners.xml", firstLine},
-		}
+		}, nil
 	}
 
-	return nil
+	return nil, errors.New("no matching database for banner")
 }
 
 func MatchBanners(banner string) ([]MatchResult, error) {
+	if strings.TrimSpace(banner) == "" {
+		return nil, errors.New("banner is empty")
+	}
+
 	// Creates the matches list
 	matchList := make([]MatchResult, 0)
 
