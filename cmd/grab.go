@@ -77,44 +77,6 @@ func grabOne(target string, port string, protocol string, timeout time.Duration)
 	return result
 }
 
-// Outputs a single result as a block
-func printGrabResult(r output.ScanResult) {
-	// Outputs the port and state
-	fmt.Printf("%s/%s  %s\n", r.Port, r.Protocol, r.State)
-
-	// Outputs the matches
-	if len(r.Matches) == 0 {
-		fmt.Println("  Service: -")
-	}
-	for i, m := range r.Matches {
-		label := "Service:"
-		if i > 0 {
-			label = "        "
-		}
-		name := strings.TrimSpace(m.Vendor + " " + m.Product)
-		if name == "" {
-			name = "-"
-		}
-		version := ""
-		if m.Version != "" {
-			version = " (v" + m.Version + ")"
-		}
-		fmt.Printf("  %s %s%s\n", label, name, version)
-	}
-
-	// Outputs the full banner, indented
-	if strings.TrimSpace(r.Banner) == "" {
-		fmt.Println("  Banner:  (none)")
-	} else {
-		fmt.Println("  Banner:")
-		for _, line := range strings.Split(strings.TrimSpace(r.Banner), "\n") {
-			fmt.Println("    " + strings.TrimSpace(line))
-		}
-	}
-
-	fmt.Println()
-}
-
 // Defines the grab command
 var grabCmd = &cobra.Command{
 	Use:   "grab",
@@ -198,9 +160,7 @@ var grabCmd = &cobra.Command{
 		fmt.Printf("Grabbing banners from %s (%s)\n\n", target, strings.Join(protocols, ", "))
 
 		// Outputs each of the results
-		for _, r := range results {
-			printGrabResult(r)
-		}
+		output.PrintResults(results)
 	},
 }
 
