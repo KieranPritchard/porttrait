@@ -30,12 +30,9 @@ func PrepareDomain(domain string) ([]string, error)  {
 	} else {
 		// Strip path, port, or query parameters if user passed "example.com/path" or "example.com:8080"
 		idx := strings.IndexAny(domain, "/:?#")
-		if idx == -1 {
-			return nil, errors.New("Unable to strip domain from ports and protocol")
+		if idx != -1 {
+			domain = domain[:idx]
 		}
-
-		// Returns the domain
-		domain = domain[:idx]
 	}
 
 	// Remove trailing dot (canonical form root domain)
@@ -66,15 +63,7 @@ func PrepareDomain(domain string) ([]string, error)  {
 
 	// Loops over each of the ip addresses
 	for _, ip := range ips {
-		// Gets the ip address
-		ipv4 := ip.To4()
-		
-		// Checks if emptu
-		if ipv4 == nil {
-			return nil, errors.New("There is no IP address on this domain")
-		}
-
-		targets = append(targets, ipv4.String())
+		targets = append(targets, ip.String())
 	}
 
 	// Returns domain and nil error

@@ -1,11 +1,11 @@
-package cmd
+package scan
 
 import (
 	"errors"
 	"net"
 	"time"
 
-	banners "kpritchard.co.uk/porttrait/internal/banners"
+	"kpritchard.co.uk/porttrait/internal/banners"
 	"kpritchard.co.uk/porttrait/internal/fingerprinting"
 )
 
@@ -23,7 +23,7 @@ func printable(b []byte) string {
 }
 
 // Probes a UDP port and returns the banner, matches and state
-func scanUDP(target string, port string, timeout time.Duration) (string, []fingerprinting.MatchResult, string, error) {
+func ScanUDP(target string, port string, timeout time.Duration) (string, []fingerprinting.MatchResult, string, error) {
 	address := net.JoinHostPort(target, port)
 
 	// Tries each probe for the port until one gets a reply
