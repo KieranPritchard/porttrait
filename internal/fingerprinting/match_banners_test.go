@@ -59,7 +59,7 @@ func TestSelectTargetsCoversEmbeddedDatabases(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			targets := selectTargets(test.banner, testDatabaseFiles)
+			targets := SelectTargets(test.banner, testDatabaseFiles)
 			gotDBs := make([]string, 0, len(targets))
 			for _, target := range targets {
 				if len(gotDBs) == 0 || gotDBs[len(gotDBs)-1] != target.dbFile {
@@ -76,7 +76,7 @@ func TestSelectTargetsCoversEmbeddedDatabases(t *testing.T) {
 
 func TestSelectTargetsExtractsHTTPFingerprintInputs(t *testing.T) {
 	banner := "HTTP/1.1 401 Unauthorized\r\nServer: Transmission\r\nWWW-Authenticate: Basic realm=\"Transmission\"\r\nSet-Cookie: PHPSESSID=deleted\r\nX-Powered-By: PHP/8.2.14\r\n\r\n<title>FRITZ!Box</title>"
-	targets := selectTargets(banner, testDatabaseFiles)
+	targets := SelectTargets(banner, testDatabaseFiles)
 	got := make(map[string]map[string]bool)
 	for _, target := range targets {
 		if got[target.dbFile] == nil {
