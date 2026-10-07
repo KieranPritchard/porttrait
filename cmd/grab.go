@@ -13,6 +13,7 @@ import (
 	"kpritchard.co.uk/porttrait/internal/banners"
 	"kpritchard.co.uk/porttrait/internal/fingerprinting"
 	"kpritchard.co.uk/porttrait/internal/input"
+	"kpritchard.co.uk/porttrait/internal/scan"
 )
 
 // Stores the protocol flag for the grab command (tcp, udp or both)
@@ -55,16 +56,15 @@ func grabOne(target string, port string, protocol string, timeout time.Duration)
 
 	// Runs the scanner for the protocol
 	if protocol == "udp" {
-		banner, err = banners.GrabUDPBanners(address, timeout)
-
-		// No reply to the probe means the port is open or filtered
-		if errors.Is(err, banners.ErrNoResponse) {
-			result.State = "open|filtered"
-			err = nil
-		}
-	} else {
-		banner, err = banners.GrabTCPBanners(address, timeout)
+		banner, matches, state, err := scan.ScanUDP(target, port, timeout)
+		result.Banner = banner
+		result.Matches = matches
+		result.State = state
+		result.Err = err
+		return result
 	}
+
+	banner, err = banners.GrabTCPBanners(address, timeout)
 
 	// The port was specifically requested, so the failure is kept and shown
 	if err != nil {

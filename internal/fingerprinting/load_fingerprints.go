@@ -75,17 +75,3 @@ func extractServerHeader(banner string) string {
 	}
 	return ""
 }
-
-// Picks the right database and input for the banner
-func selectTarget(banner string) (dbFile string, input string) {
-	switch {
-	case strings.HasPrefix(banner, "HTTP/"):
-		return "http_servers.xml", extractServerHeader(banner)
-	case strings.HasPrefix(banner, "SSH-"):
-		return "ssh_banners.xml", strings.TrimSpace(banner)
-	case strings.HasPrefix(banner, "220"):
-		// FTP and SMTP both greet with 220, so the first line is tried against both
-		return "ftp_banners.xml", strings.TrimSpace(strings.SplitN(banner, "\n", 2)[0])
-	}
-	return "", ""
-}

@@ -1,6 +1,7 @@
 package fingerprinting
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -35,6 +36,48 @@ type UDPProbe struct {
 var genericUDPProbe = UDPProbe{
 	Name:    "generic",
 	Payload: []byte{0x00},
+	Rules: []UDPRule{
+		{
+			// SIP response with Server or User-Agent header
+			Pattern: regexp.MustCompile(`(?is)^SIP/2\.0\s+\d{3}.*?\r\n(?:Server|User-Agent):\s*([^\r\n]+)`),
+			Product: "SIP ($1)",
+			Recog:   "sip_banners.xml",
+		},
+		{
+			Pattern: regexp.MustCompile(`(?i)^SIP/2\.0\s+\d{3}`),
+			Product: "SIP server",
+		},
+		{
+			// HTTP response with Server header
+			Pattern: regexp.MustCompile(`(?is)^HTTP/1\.[01]\s+\d{3}.*?\r\nserver:\s*([^\r\n]+)`),
+			Product: "HTTP ($1)",
+			Recog:   "http_servers.xml",
+		},
+		{
+			Pattern: regexp.MustCompile(`(?i)^HTTP/1\.[01]\s+\d{3}`),
+			Product: "HTTP server",
+		},
+		{
+			// DNS response with QR bit
+			Pattern: regexp.MustCompile(`^[\x00-\xff]{2}[\x80-\xff]`),
+			Product: "DNS server",
+		},
+		{
+			// SNMP GetResponse
+			Pattern: regexp.MustCompile(`^\x30[\x00-\xff]*\xa2`),
+			Product: "SNMP agent",
+		},
+		{
+			// NTP server response
+			Func: func(resp []byte) *MatchResult {
+				if len(resp) >= 48 && resp[0]&0x07 == 4 {
+					version := (resp[0] >> 3) & 0x07
+					return &MatchResult{Product: "NTP server", Version: fmt.Sprintf("v%d", version)}
+				}
+				return nil
+			},
+		},
+	},
 }
 
 // Turns every byte into the rune with the same value, so \xNN in a pattern
@@ -59,6 +102,29 @@ func netbiosProbe() []byte {
 func ntpProbe() []byte {
 	p := make([]byte, 48)
 	p[0] = 0x1b
+	return p
+}
+
+// Builds the DHCP discover request
+func dhcpProbe() []byte {
+	p := make([]byte, 240)
+	p[0] = 0x01 // BOOTREQUEST
+	p[1] = 0x01 // Ethernet
+	p[2] = 0x06 // MAC len
+	p[4] = 0x39 // XID
+	p[5] = 0x03
+	p[6] = 0xf3
+	p[7] = 0x26
+	p[10] = 0x80 // Broadcast flag
+	// Client MAC
+	copy(p[28:], []byte("\x00\x0c\x29\x12\x34\x56"))
+	// Magic cookie
+	p[236] = 0x63
+	p[237] = 0x82
+	p[238] = 0x53
+	p[239] = 0x63
+	// Option 53: DHCP Discover, Option 255: End
+	p = append(p, 53, 1, 1, 255)
 	return p
 }
 
@@ -133,19 +199,30 @@ func MatchUDP(probe UDPProbe, resp []byte) []MatchResult {
 		var out []MatchResult
 
 		// Recog matches come first because they are the most specific
-		if rule.Recog != "" && len(idx) >= 4 && idx[2] >= 0 {
-			out = append(out, recogMatches(rule.Recog, s[idx[2]:idx[3]])...)
+		if rule.Recog != "" {
+			var recogInput string
+			if len(idx) >= 4 && idx[2] >= 0 {
+				recogInput = s[idx[2]:idx[3]]
+			} else if len(idx) >= 2 && idx[0] >= 0 {
+				recogInput = s[idx[0]:idx[1]]
+			}
+			if recogInput != "" {
+				out = append(out, recogMatches(rule.Recog, recogInput)...)
+			}
 		}
 
 		// Expands $1 etc. in the rule's fields
 		expand := func(t string) string {
 			return string(rule.Pattern.ExpandString(nil, t, s, idx))
 		}
-		out = append(out, MatchResult{
+		fallback := MatchResult{
 			Vendor:  expand(rule.Vendor),
 			Product: expand(rule.Product),
 			Version: expand(rule.Version),
-		})
+		}
+		if fallback.Vendor != "" || fallback.Product != "" || fallback.Version != "" {
+			out = append(out, fallback)
+		}
 		return out
 	}
 
