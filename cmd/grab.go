@@ -14,20 +14,11 @@ import (
 	"kpritchard.co.uk/porttrait/internal/fingerprinting"
 	"kpritchard.co.uk/porttrait/internal/input"
 	"kpritchard.co.uk/porttrait/internal/scan"
+	"kpritchard.co.uk/porttrait/internal/output"
 )
 
 // Stores the protocol flag for the grab command (tcp, udp or both)
 var grabProtocol string
-
-// Stores the result of grabbing a single port
-type grabResult struct {
-	Port     string
-	Protocol string
-	State    string
-	Banner   string
-	Err      error
-	Matches  []fingerprinting.MatchResult
-}
 
 // Works out which protocols to use from the flag
 func parseProtocols(value string) ([]string, error) {
@@ -43,9 +34,9 @@ func parseProtocols(value string) ([]string, error) {
 }
 
 // Grabs the banner for a single port and protocol
-func grabOne(target string, port string, protocol string, timeout time.Duration) grabResult {
+func grabOne(target string, port string, protocol string, timeout time.Duration) output.ScanResult {
 	// Stores the result of the grab
-	result := grabResult{Port: port, Protocol: protocol, State: "open"}
+	result := output.ScanResult{Port: port, Protocol: protocol, State: "open"}
 
 	// Builds the address (also works for IPv6)
 	address := net.JoinHostPort(target, port)
@@ -56,11 +47,10 @@ func grabOne(target string, port string, protocol string, timeout time.Duration)
 
 	// Runs the scanner for the protocol
 	if protocol == "udp" {
-		banner, matches, state, err := scan.ScanUDP(target, port, timeout)
+		banner, matches, state, _ := scan.ScanUDP(target, port, timeout)
 		result.Banner = banner
 		result.Matches = matches
 		result.State = state
-		result.Err = err
 		return result
 	}
 
@@ -69,7 +59,6 @@ func grabOne(target string, port string, protocol string, timeout time.Duration)
 	// The port was specifically requested, so the failure is kept and shown
 	if err != nil {
 		result.State = "closed"
-		result.Err = err
 		return result
 	}
 
@@ -89,15 +78,9 @@ func grabOne(target string, port string, protocol string, timeout time.Duration)
 }
 
 // Outputs a single result as a block
-func printGrabResult(r grabResult) {
+func printGrabResult(r output.ScanResult) {
 	// Outputs the port and state
 	fmt.Printf("%s/%s  %s\n", r.Port, r.Protocol, r.State)
-
-	// Closed ports only show the reason
-	if r.State == "closed" {
-		fmt.Printf("  Reason:  %v\n\n", r.Err)
-		return
-	}
 
 	// Outputs the matches
 	if len(r.Matches) == 0 {
@@ -194,7 +177,7 @@ var grabCmd = &cobra.Command{
 		duration := time.Duration(timeout) * time.Second
 
 		// Builds a result slot for each port and protocol, so the output keeps the order given
-		results := make([]grabResult, len(portList)*len(protocols))
+		results := make([]output.ScanResult, len(portList)*len(protocols))
 		var wg sync.WaitGroup
 
 		// Grabs every port and protocol at the same time
