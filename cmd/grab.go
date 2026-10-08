@@ -17,9 +17,6 @@ import (
 	"kpritchard.co.uk/porttrait/internal/output"
 )
 
-// Stores the protocol flag for the grab command (tcp, udp or both)
-var grabProtocol string
-
 // Works out which protocols to use from the flag
 func parseProtocols(value string) ([]string, error) {
 	switch strings.ToLower(value) {
@@ -103,7 +100,7 @@ var grabCmd = &cobra.Command{
 		}
 
 		// Works out which protocols to use
-		protocols, err := parseProtocols(grabProtocol)
+		protocols, err := parseProtocols(protocol)
 		if err != nil {
 			fmt.Println("Error occured: ", err)
 			return
@@ -165,12 +162,6 @@ var grabCmd = &cobra.Command{
 }
 
 func init() {
-	grabCmd.Flags().StringVarP(&target, "target", "t", "", "Domain to be targeted")
-	grabCmd.Flags().StringVarP(&ports, "ports", "p", "", "Port(s) to be targeted, comma separated")
-
-	// Adds the protocol flag to the grab command
-	grabCmd.Flags().StringVar(&grabProtocol, "protocol", "tcp", "Protocol to use: tcp, udp or both")
-
 	// Adds the command to the root command
 	rootCmd.AddCommand(grabCmd)
 }

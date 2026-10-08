@@ -14,6 +14,7 @@ import (
 var timeout int
 var target string
 var ports string
+var protocol string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -34,4 +35,5 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&timeout, "timeout", "T", 10, "Length of timeout")
 	rootCmd.PersistentFlags().StringVarP(&target, "target", "t", "", "Domain to be targeted")
 	rootCmd.PersistentFlags().StringVarP(&ports, "ports", "p", "", "Port to be targeted")
+	rootCmd.PersistentFlags().StringVarP(&protocol, "protocol", "P", "tcp", "Protocol to be used (tcp, udp or both)")
 }
