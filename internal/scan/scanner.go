@@ -26,7 +26,7 @@ func RunScan(target string, portList []string, protocols []string, timeout int, 
 	start := time.Now()
 
 	// Keep this below `ulimit -n`
-	numWorkers := 500
+	numWorkers := 5000
 	if len(jobList) < numWorkers {
 		numWorkers = len(jobList)
 	}

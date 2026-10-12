@@ -1,8 +1,8 @@
 package scan
 
 import (
-	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -48,11 +48,10 @@ func ScanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan s
 
 			// Runs the tcp scanner
 			banner, err = banners.GrabTCPBanners(address, duration)
-			if err == nil {
+			if err == nil && strings.TrimSpace(banner) != "" {
 				// Attempts to match the banner
 				matches, err = fingerprinting.MatchBanners(banner)
 				if err != nil {
-					fmt.Println("Error occured: ", err)
 					err = nil
 				}
 			}
