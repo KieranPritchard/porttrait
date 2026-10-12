@@ -17,6 +17,9 @@ var scanProtocol string
 // Stores the verbose flag for the scan command
 var scanVerbose bool
 
+// Stores the flag for scanning the common ports
+var scanCommon bool
+
 // Defines the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan",
@@ -96,6 +99,9 @@ func init() {
 
 	// Adds the verbose flag to the scan command
 	scanCmd.Flags().BoolVarP(&scanVerbose, "verbose", "v", false, "Show the full banner and every match for each port")
+
+	// Adds the scan common flag to the command
+	scanCmd.Flags().BoolVar(&scanCommon, "scan-common", false, "Scans all of the common ports for banners")
 
 	// Adds the command to the root command
 	rootCmd.AddCommand(scanCmd)
