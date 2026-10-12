@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -13,8 +14,8 @@ import (
 	"kpritchard.co.uk/porttrait/internal/banners"
 	"kpritchard.co.uk/porttrait/internal/fingerprinting"
 	"kpritchard.co.uk/porttrait/internal/input"
-	"kpritchard.co.uk/porttrait/internal/scan"
 	"kpritchard.co.uk/porttrait/internal/output"
+	"kpritchard.co.uk/porttrait/internal/scan"
 )
 
 // Works out which protocols to use from the flag
@@ -31,7 +32,7 @@ func parseProtocols(value string) ([]string, error) {
 }
 
 // Grabs the banner for a single port and protocol
-func grabOne(target string, port string, protocol string, timeout time.Duration) output.ScanResult {
+func grabOne(ctx context.Context, target string, port string, protocol string, timeout time.Duration) output.ScanResult {
 	// Stores the result of the grab
 	result := output.ScanResult{Port: port, Protocol: protocol, State: "open"}
 
@@ -44,14 +45,14 @@ func grabOne(target string, port string, protocol string, timeout time.Duration)
 
 	// Runs the scanner for the protocol
 	if protocol == "udp" {
-		banner, matches, state, _ := scan.ScanUDP(target, port, timeout)
+		banner, matches, state, _ := scan.ScanUDP(ctx, target, port, timeout)
 		result.Banner = banner
 		result.Matches = matches
 		result.State = state
 		return result
 	}
 
-	banner, err = banners.GrabTCPBanners(address, timeout)
+	banner, err = banners.GrabTCPBanners(ctx, address, timeout)
 
 	// The port was specifically requested, so the failure is kept and shown
 	if err != nil {
@@ -62,14 +63,14 @@ func grabOne(target string, port string, protocol string, timeout time.Duration)
 	// Adds the banner to the result struct
 	result.Banner = banner
 
-	// Attempts to match the banner
-	matches, err := fingerprinting.MatchBanners(banner)
-	if err != nil {
-		fmt.Println("Error occured: ", err)
+	// Attempts to match the banner if it's not empty
+	if strings.TrimSpace(banner) != "" {
+		matches, err := fingerprinting.MatchBanners(banner)
+		if err == nil {
+			// Adds the matches to the result struct
+			result.Matches = matches
+		}
 	}
-
-	// Adds the matches to the result struct
-	result.Matches = matches
 
 	return result
 }
@@ -136,6 +137,7 @@ var grabCmd = &cobra.Command{
 		duration := time.Duration(timeout) * time.Second
 
 		// Builds a result slot for each port and protocol, so the output keeps the order given
+		ctx := context.Background()
 		results := make([]output.ScanResult, len(portList)*len(protocols))
 		var wg sync.WaitGroup
 
@@ -146,7 +148,7 @@ var grabCmd = &cobra.Command{
 				wg.Add(1)
 				go func(i int, port string, protocol string) {
 					defer wg.Done()
-					results[i] = grabOne(target, port, protocol, duration)
+					results[i] = grabOne(ctx, target, port, protocol, duration)
 				}(index, port, protocol)
 				index++
 			}

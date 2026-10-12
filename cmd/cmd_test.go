@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"net"
 	"strings"
 	"testing"
@@ -48,6 +49,8 @@ func TestParseProtocols(t *testing.T) {
 }
 
 func TestGrabOne(t *testing.T) {
+	ctx := context.Background()
+
 	t.Run("TCP open service", func(t *testing.T) {
 		ln, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
@@ -66,7 +69,7 @@ func TestGrabOne(t *testing.T) {
 			_, _ = conn.Write([]byte("SSH-2.0-OpenSSH_8.9\r\n"))
 		}()
 
-		result := grabOne("127.0.0.1", portStr, "tcp", 500*time.Millisecond)
+		result := grabOne(ctx, "127.0.0.1", portStr, "tcp", 500*time.Millisecond)
 		if result.State != "open" {
 			t.Errorf("expected state 'open', got %q", result.State)
 		}
@@ -87,7 +90,7 @@ func TestGrabOne(t *testing.T) {
 		_, portStr, _ := net.SplitHostPort(ln.Addr().String())
 		_ = ln.Close()
 
-		result := grabOne("127.0.0.1", portStr, "tcp", 200*time.Millisecond)
+		result := grabOne(ctx, "127.0.0.1", portStr, "tcp", 200*time.Millisecond)
 		if result.State != "closed" {
 			t.Errorf("expected state 'closed', got %q", result.State)
 		}
@@ -113,7 +116,7 @@ func TestGrabOne(t *testing.T) {
 			}
 		}()
 
-		result := grabOne("127.0.0.1", portStr, "udp", 500*time.Millisecond)
+		result := grabOne(ctx, "127.0.0.1", portStr, "udp", 500*time.Millisecond)
 		if result.State != "open" {
 			t.Errorf("expected state 'open', got %q", result.State)
 		}

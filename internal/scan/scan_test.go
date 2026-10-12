@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"context"
 	"net"
 	"strconv"
 	"strings"
@@ -45,6 +46,8 @@ func TestPrintable(t *testing.T) {
 }
 
 func TestScanUDP(t *testing.T) {
+	ctx := context.Background()
+
 	t.Run("open responsive UDP service", func(t *testing.T) {
 		pc, err := net.ListenPacket("udp", "127.0.0.1:0")
 		if err != nil {
@@ -68,7 +71,7 @@ func TestScanUDP(t *testing.T) {
 			}
 		}()
 
-		banner, matches, state, err := ScanUDP("127.0.0.1", portStr, 500*time.Millisecond)
+		banner, matches, state, err := ScanUDP(ctx, "127.0.0.1", portStr, 500*time.Millisecond)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -93,7 +96,7 @@ func TestScanUDP(t *testing.T) {
 		_, portStr, _ := net.SplitHostPort(pc.LocalAddr().String())
 
 		// Server does not reply
-		banner, matches, state, err := ScanUDP("127.0.0.1", portStr, 100*time.Millisecond)
+		banner, matches, state, err := ScanUDP(ctx, "127.0.0.1", portStr, 100*time.Millisecond)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -107,6 +110,8 @@ func TestScanUDP(t *testing.T) {
 }
 
 func TestScanWorker(t *testing.T) {
+	ctx := context.Background()
+
 	// Start a mock TCP server
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -132,7 +137,7 @@ func TestScanWorker(t *testing.T) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go ScanWorker("127.0.0.1", 1, false, jobs, results, &wg)
+	go ScanWorker(ctx, "127.0.0.1", 1, false, jobs, results, &wg)
 
 	// Send an open port job and a closed port job
 	jobs <- scanJob{Port: portStr, Protocol: "tcp"}

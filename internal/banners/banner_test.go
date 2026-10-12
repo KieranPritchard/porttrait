@@ -1,6 +1,7 @@
 package banners
 
 import (
+	"context"
 	"errors"
 	"net"
 	"strings"
@@ -70,6 +71,8 @@ func TestCleanBanner(t *testing.T) {
 }
 
 func TestGrabTCPBanners(t *testing.T) {
+	ctx := context.Background()
+
 	t.Run("server speaks first", func(t *testing.T) {
 		ln, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
@@ -86,7 +89,7 @@ func TestGrabTCPBanners(t *testing.T) {
 			_, _ = conn.Write([]byte("SSH-2.0-MockSSH_Server\r\n"))
 		}()
 
-		banner, err := GrabTCPBanners(ln.Addr().String(), 500*time.Millisecond)
+		banner, err := GrabTCPBanners(ctx, ln.Addr().String(), 500*time.Millisecond)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -115,7 +118,7 @@ func TestGrabTCPBanners(t *testing.T) {
 			}
 		}()
 
-		banner, err := GrabTCPBanners(ln.Addr().String(), 500*time.Millisecond)
+		banner, err := GrabTCPBanners(ctx, ln.Addr().String(), 500*time.Millisecond)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -133,7 +136,7 @@ func TestGrabTCPBanners(t *testing.T) {
 		addr := ln.Addr().String()
 		_ = ln.Close() // immediately close to guarantee port is closed
 
-		_, err = GrabTCPBanners(addr, 200*time.Millisecond)
+		_, err = GrabTCPBanners(ctx, addr, 200*time.Millisecond)
 		if err == nil {
 			t.Error("expected connection error for closed port, got nil")
 		}
@@ -141,6 +144,8 @@ func TestGrabTCPBanners(t *testing.T) {
 }
 
 func TestGrabUDPRaw(t *testing.T) {
+	ctx := context.Background()
+
 	t.Run("successful UDP echo", func(t *testing.T) {
 		pc, err := net.ListenPacket("udp", "127.0.0.1:0")
 		if err != nil {
@@ -159,7 +164,7 @@ func TestGrabUDPRaw(t *testing.T) {
 			}
 		}()
 
-		resp, err := GrabUDPRaw(pc.LocalAddr().String(), []byte("PING"), 500*time.Millisecond)
+		resp, err := GrabUDPRaw(ctx, pc.LocalAddr().String(), []byte("PING"), 500*time.Millisecond)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -176,7 +181,7 @@ func TestGrabUDPRaw(t *testing.T) {
 		defer pc.Close()
 		// Silent server: reads nothing, responds to nothing
 
-		_, err = GrabUDPRaw(pc.LocalAddr().String(), []byte("PING"), 100*time.Millisecond)
+		_, err = GrabUDPRaw(ctx, pc.LocalAddr().String(), []byte("PING"), 100*time.Millisecond)
 		if !errors.Is(err, ErrNoResponse) {
 			t.Errorf("expected ErrNoResponse on timeout, got %v", err)
 		}
@@ -184,6 +189,8 @@ func TestGrabUDPRaw(t *testing.T) {
 }
 
 func TestGrabUDPBanners(t *testing.T) {
+	ctx := context.Background()
+
 	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("failed to listen on udp: %v", err)
@@ -199,7 +206,7 @@ func TestGrabUDPBanners(t *testing.T) {
 		_, _ = pc.WriteTo([]byte("UDP Service Greeting\r\n"), addr)
 	}()
 
-	banner, err := GrabUDPBanners(pc.LocalAddr().String(), 500*time.Millisecond)
+	banner, err := GrabUDPBanners(ctx, pc.LocalAddr().String(), 500*time.Millisecond)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

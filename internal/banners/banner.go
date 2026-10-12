@@ -1,6 +1,7 @@
 package banners
 
 import (
+	"context"
 	"errors"
 	"net"
 	"strings"
@@ -35,16 +36,26 @@ func cleanBanner(b []byte) string {
 }
 
 // Sends a payload over UDP and returns the raw response bytes
-func GrabUDPRaw(target string, payload []byte, timeout time.Duration) ([]byte, error) {
+func GrabUDPRaw(ctx context.Context, target string, payload []byte, timeout time.Duration) ([]byte, error) {
+	// Check for cancellation before doing any network I/O
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Sets up the udp socket and closes when done
-	conn, err := net.DialTimeout("udp", target, timeout)
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "udp", target)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
 	// Sets the deadline for the write and the read
-	_ = conn.SetDeadline(time.Now().Add(timeout))
+	deadline := time.Now().Add(timeout)
+	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
+		deadline = ctxDeadline
+	}
+	_ = conn.SetDeadline(deadline)
 
 	// Sends the probe
 	if _, err := conn.Write(payload); err != nil {
@@ -87,9 +98,15 @@ func readBanner(conn net.Conn, timeout time.Duration) (string, error) {
 }
 
 // Helper function to grab a TCP service banner
-func GrabTCPBanners(target string, timeout time.Duration) (string, error) {
+func GrabTCPBanners(ctx context.Context, target string, timeout time.Duration) (string, error) {
+	// Check for cancellation before doing any network I/O
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
 	// Attempts a tcp connection to target and closes when done
-	conn, err := net.DialTimeout("tcp", target, timeout)
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "tcp", target)
 	if err != nil {
 		// Connection failed, so the port is closed or filtered
 		return "", err
@@ -117,16 +134,26 @@ func GrabTCPBanners(target string, timeout time.Duration) (string, error) {
 }
 
 // Helper function to grab a UDP service banner
-func GrabUDPBanners(target string, timeout time.Duration) (string, error) {
+func GrabUDPBanners(ctx context.Context, target string, timeout time.Duration) (string, error) {
+	// Check for cancellation before doing any network I/O
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
 	// Sets up the udp socket (no handshake happens here) and closes when done
-	conn, err := net.DialTimeout("udp", target, timeout)
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "udp", target)
 	if err != nil {
 		return "", err
 	}
 	defer conn.Close()
 
 	// Sends a probe, since most UDP services never speak first
-	_ = conn.SetWriteDeadline(time.Now().Add(timeout))
+	deadline := time.Now().Add(timeout)
+	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
+		deadline = ctxDeadline
+	}
+	_ = conn.SetWriteDeadline(deadline)
 	if _, err := conn.Write([]byte{0x00}); err != nil {
 		return "", err
 	}

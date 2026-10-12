@@ -1,7 +1,10 @@
 package scan
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,6 +28,10 @@ func RunScan(target string, portList []string, protocols []string, timeout int, 
 	fmt.Printf("Scanning %s (%s) - %d ports\n\n", target, strings.Join(protocols, ", "), len(portList))
 	start := time.Now()
 
+	// Sets up a context that cancels on SIGINT/SIGTERM for graceful shutdown
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	// Keep this below `ulimit -n`
 	numWorkers := 5000
 	if len(jobList) < numWorkers {
@@ -39,13 +46,18 @@ func RunScan(target string, portList []string, protocols []string, timeout int, 
 	// Starts the workers
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
-		go ScanWorker(target, timeout, showUnresponsive, jobs, results, &wg)
+		go ScanWorker(ctx, target, timeout, showUnresponsive, jobs, results, &wg)
 	}
 
 	// Feeds the jobs in from a separate goroutine
 	go func() {
 		for _, job := range jobList {
-			jobs <- job
+			select {
+			case jobs <- job:
+			case <-ctx.Done():
+				// Context cancelled, stop sending jobs
+				break
+			}
 		}
 		// Tells the workers there is no more work
 		close(jobs)
@@ -83,6 +95,11 @@ func RunScan(target string, portList []string, protocols []string, timeout int, 
 		}
 	}
 
-	// Outputs the summary
-	fmt.Printf("\n%d open port(s) found in %s\n", len(found), time.Since(start).Round(time.Millisecond))
+	// Shows whether the scan was interrupted or completed fully
+	elapsed := time.Since(start).Round(time.Millisecond)
+	if ctx.Err() != nil {
+		fmt.Printf("\nScan interrupted — %d open port(s) found in %s\n", len(found), elapsed)
+	} else {
+		fmt.Printf("\n%d open port(s) found in %s\n", len(found), elapsed)
+	}
 }

@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"context"
 	"errors"
 	"net"
 	"time"
@@ -23,12 +24,17 @@ func printable(b []byte) string {
 }
 
 // Probes a UDP port and returns the banner, matches and state
-func ScanUDP(target string, port string, timeout time.Duration) (string, []fingerprinting.MatchResult, string, error) {
+func ScanUDP(ctx context.Context, target string, port string, timeout time.Duration) (string, []fingerprinting.MatchResult, string, error) {
 	address := net.JoinHostPort(target, port)
 
 	// Tries each probe for the port until one gets a reply
 	for _, probe := range fingerprinting.UDPProbesFor(port) {
-		resp, err := banners.GrabUDPRaw(address, probe.Payload, timeout)
+		// Check for cancellation before sending each probe
+		if ctx.Err() != nil {
+			return "", nil, "closed", ctx.Err()
+		}
+
+		resp, err := banners.GrabUDPRaw(ctx, address, probe.Payload, timeout)
 
 		// No reply to this probe, so tries the next one
 		if errors.Is(err, banners.ErrNoResponse) {

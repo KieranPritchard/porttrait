@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"context"
 	"net"
 	"strings"
 	"sync"
@@ -18,7 +19,7 @@ type scanJob struct {
 }
 
 // Defines the worker function for the scan command
-func ScanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan scanJob, results chan<- output.ScanResult, wg *sync.WaitGroup) {
+func ScanWorker(ctx context.Context, target string, timeout int, showUnresponsive bool, jobs <-chan scanJob, results chan<- output.ScanResult, wg *sync.WaitGroup) {
 	// Marks the worker as done when the jobs channel is closed
 	defer wg.Done()
 
@@ -27,6 +28,11 @@ func ScanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan s
 
 	// Each worker pulls jobs until the jobs channel is closed
 	for job := range jobs {
+		// Check for cancellation before starting any network I/O
+		if ctx.Err() != nil {
+			return
+		}
+
 		// Stores the banner, matches and the state of the port
 		var banner string
 		var matches []fingerprinting.MatchResult
@@ -36,7 +42,7 @@ func ScanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan s
 		// Runs the scanner for the protocol
 		if job.Protocol == "udp" {
 			// Sends the probes for the port and matches the raw reply
-			banner, matches, state, err = ScanUDP(target, job.Port, duration)
+			banner, matches, state, err = ScanUDP(ctx, target, job.Port, duration)
 
 			// Skips silent UDP ports on full scans, since every filtered port would show up
 			if err == nil && state == "open|filtered" && !showUnresponsive {
@@ -47,7 +53,7 @@ func ScanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan s
 			address := net.JoinHostPort(target, job.Port)
 
 			// Runs the tcp scanner
-			banner, err = banners.GrabTCPBanners(address, duration)
+			banner, err = banners.GrabTCPBanners(ctx, address, duration)
 			if err == nil && strings.TrimSpace(banner) != "" {
 				// Attempts to match the banner
 				matches, err = fingerprinting.MatchBanners(banner)
@@ -58,7 +64,7 @@ func ScanWorker(target string, timeout int, showUnresponsive bool, jobs <-chan s
 		}
 
 		if err != nil {
-			// Closed port, so skip it instead of printing an error for every port
+			// Closed port or cancelled context, so skip it
 			continue
 		}
 
