@@ -27,6 +27,9 @@ var scanVerbose bool
 // Stores the flag for scanning the common ports
 var scanCommon bool
 
+// Stores the flag for scanning all
+var scanAll bool
+
 // Defines the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan",
@@ -97,13 +100,18 @@ var scanCmd = &cobra.Command{
 			}
 		}
 
-		// Checks if the ports are empty
-		if ports == "" {
+		// Checks for scan all
+		if scanAll {
 			// Loops over all the ports
 			for port := 1; port <= 65535; port++ {
 				// Converts the port to a string
 				portList = append(portList, strconv.Itoa(port))
 			}
+		}
+
+		// Checks if the ports are empty
+		if ports == "" {
+		
 		} else {
 			// Loops over each of the comma separated ports (also handles a single port)
 			for _, port := range strings.Split(ports, ",") {
@@ -135,6 +143,9 @@ func init() {
 
 	// Adds the scan common flag to the command
 	scanCmd.Flags().BoolVar(&scanCommon, "scan-common", false, "Scans all of the common ports for banners")
+
+	// Adds the scan all flag
+	scanCmd.Flags().BoolVar(&scanAll, "all", false, "Scans all ports for banners")
 
 	// Adds the command to the root command
 	rootCmd.AddCommand(scanCmd)
