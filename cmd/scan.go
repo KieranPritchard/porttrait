@@ -109,7 +109,17 @@ var scanCmd = &cobra.Command{
 			}
 		}
 
-		// 
+		// Checks if a port was provided
+		if len(ports) != 0 {
+			// Removes the white space from the port
+			preparedPort, err := input.PreparePort(port)
+			if err != nil {
+				fmt.Println("Error occured: ", err)
+				continue
+			}
+
+			portList = append(portList, preparedPort)
+		}
 
 		// Checks if the ports are provided as a list
 		if len(ports) != 0 && strings.Contains(ports, ",") {
