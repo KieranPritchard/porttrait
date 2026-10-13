@@ -109,10 +109,10 @@ var scanCmd = &cobra.Command{
 			}
 		}
 
-		// Checks if the ports are empty
-		if ports == "" {
-		
-		} else {
+		// 
+
+		// Checks if the ports are provided as a list
+		if len(ports) != 0 && strings.Contains(ports, ",") {
 			// Loops over each of the comma separated ports (also handles a single port)
 			for _, port := range strings.Split(ports, ",") {
 				// Removes the white space from the port
