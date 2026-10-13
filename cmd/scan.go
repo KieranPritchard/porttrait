@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"bufio"
+	"embed"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -10,6 +12,11 @@ import (
 	"kpritchard.co.uk/porttrait/internal/input"
 	"kpritchard.co.uk/porttrait/internal/scan"
 )
+
+// Stores the directory of the lists
+//
+//go:embed lists/*
+var lists embed.FS
 
 // Stores the protocol flag for the scan command (tcp, udp or both)
 var scanProtocol string
@@ -63,6 +70,32 @@ var scanCmd = &cobra.Command{
 
 		// Stores the ports to scan
 		var portList []string
+
+		// Checks for scan common
+		if scanCommon {
+			// Opens the file
+			file, err := lists.Open("/lists/common.txt")
+			if err != nil {
+				fmt.Println("Error encountered:", err)
+			}
+			defer file.Close()
+
+			// Creates a scanner for the file
+			scanner := bufio.NewScanner(file)
+
+			// Iterates over each of the scans
+			for scanner.Scan() {
+				// Stores the line for processing
+				line := scanner.Text()
+
+				// Adds to the port list
+				portList = append(portList, line)
+			}
+
+			if err := scanner.Err(); err != nil {
+				fmt.Println("Error encountered:", err)
+			}
+		}
 
 		// Checks if the ports are empty
 		if ports == "" {
