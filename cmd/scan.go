@@ -77,9 +77,10 @@ var scanCmd = &cobra.Command{
 		// Checks for scan common
 		if scanCommon {
 			// Opens the file
-			file, err := lists.Open("/lists/common.txt")
+			file, err := lists.Open("lists/common.txt")
 			if err != nil {
 				fmt.Println("Error encountered:", err)
+				return
 			}
 			defer file.Close()
 
@@ -151,7 +152,7 @@ func init() {
 	scanCmd.Flags().BoolVarP(&scanVerbose, "verbose", "v", false, "Show the full banner and every match for each port")
 
 	// Adds the scan common flag to the command
-	scanCmd.Flags().BoolVar(&scanCommon, "scan-common", false, "Scans all of the common ports for banners")
+	scanCmd.Flags().BoolVar(&scanCommon, "common", false, "Scans all of the common ports for banners")
 
 	// Adds the scan all flag
 	scanCmd.Flags().BoolVar(&scanAll, "all", false, "Scans all ports for banners")
