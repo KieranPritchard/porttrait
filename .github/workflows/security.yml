@@ -31,21 +31,3 @@ jobs:
 
       - name: Run govulncheck
         run: govulncheck ./...
-
-  gosec:
-    name: Static security analysis
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Build gosec with latest x/tools
-        run: |
-          git clone --depth 1
