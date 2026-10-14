@@ -46,8 +46,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
-
-      - name: Run gosec
-        run: gosec ./...
+      - name: Build gosec with latest x/tools
+        run: |
+          git clone --depth 1
