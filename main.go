@@ -1,6 +1,5 @@
 /*
 Copyright © 2026 Kieran Pritchard KieranPritchard06@gmail.com
-
 */
 package main
 

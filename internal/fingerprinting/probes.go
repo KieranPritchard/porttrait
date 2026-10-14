@@ -40,8 +40,8 @@ var UDPProbes = []UDPProbe{
 		},
 	},
 	{
-		Name:    "ntp-mode6-readvar",
-		Ports:   []int{123},
+		Name:  "ntp-mode6-readvar",
+		Ports: []int{123},
 		// NTP mode 6 (Control Message), Opcode 2 (Read Variables)
 		Payload: []byte("\x16\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00"),
 		Rules: []UDPRule{

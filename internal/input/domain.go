@@ -2,18 +2,18 @@ package input
 
 import (
 	"errors"
+	"golang.org/x/net/idna"
 	"net"
 	"net/url"
 	"strings"
-	"golang.org/x/net/idna"
 )
 
 // Cleans and validates the domain
-func PrepareDomain(domain string) ([]string, error)  {
+func PrepareDomain(domain string) ([]string, error) {
 	if domain == "" {
 		return nil, errors.New("domain cannot be empty")
 	}
-	
+
 	// Removes write space and lowes the string
 	domain = strings.TrimSpace(strings.ToLower(domain))
 
@@ -21,7 +21,7 @@ func PrepareDomain(domain string) ([]string, error)  {
 	if strings.Contains(domain, "://") {
 		// Parses the domain and checks for errors
 		targetDomain, err := url.Parse(domain)
-		if err != nil  {
+		if err != nil {
 			return nil, err
 		}
 
@@ -48,7 +48,7 @@ func PrepareDomain(domain string) ([]string, error)  {
 	domain = ascii
 
 	// Checks if there is data entered
-	if len(domain) == 0 || len(domain) > 253{
+	if len(domain) == 0 || len(domain) > 253 {
 		return nil, errors.New("Domain cannot be empty")
 	}
 

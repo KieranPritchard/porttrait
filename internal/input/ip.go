@@ -7,11 +7,11 @@ import (
 )
 
 // Function to clean and prepare ip addresses
-func PrepareIP(ip string) (string, error)  {
+func PrepareIP(ip string) (string, error) {
 	if ip == "" {
 		return "", errors.New("IP address cannot be empty")
 	}
-	
+
 	// Removes write space and lowes the string
 	ip = strings.TrimSpace(ip)
 

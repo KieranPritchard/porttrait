@@ -7,12 +7,12 @@ import (
 )
 
 // Cleans and validates the ports
-func PreparePort(port string) (string, error)  {
+func PreparePort(port string) (string, error) {
 	// Checks if the port is empty
 	if port == "" {
 		return "", errors.New("port cannot be empty")
 	}
-	
+
 	// Removes trailing spaces
 	port = strings.TrimSpace(port)
 
