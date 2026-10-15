@@ -30,6 +30,9 @@ var scanCommon bool
 // Stores the flag for scanning all
 var scanAll bool
 
+// Stores the flag for stealth
+var stealthScan bool
+
 // Defines the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan",
@@ -156,6 +159,9 @@ func init() {
 
 	// Adds the scan all flag
 	scanCmd.Flags().BoolVar(&scanAll, "all", false, "Scans all ports for banners")
+
+	// Adds the stealth scan flag
+	scanCmd.Flags().BoolVar(&stealthScan, "all", false, "Randomises the scan order")
 
 	// Adds the command to the root command
 	rootCmd.AddCommand(scanCmd)
