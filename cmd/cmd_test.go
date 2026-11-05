@@ -171,4 +171,13 @@ func TestCommandHierarchy(t *testing.T) {
 	if scanCmd.Flags().Lookup("verbose") == nil {
 		t.Error("expected 'verbose' flag on scanCmd")
 	}
+	if scanCmd.Flags().Lookup("common") == nil {
+		t.Error("expected 'common' flag on scanCmd")
+	}
+	if scanCmd.Flags().Lookup("all") == nil {
+		t.Error("expected 'all' flag on scanCmd")
+	}
+	if scanCmd.Flags().Lookup("stealth") == nil {
+		t.Error("expected 'stealth' flag on scanCmd")
+	}
 }

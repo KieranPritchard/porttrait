@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"embed"
 	"fmt"
+	"math/rand/v2"
 	"regexp"
 	"strconv"
 	"strings"
@@ -113,19 +114,8 @@ var scanCmd = &cobra.Command{
 			}
 		}
 
-		// Checks if a port was provided
+		// Checks if the ports are provided as a list or single port
 		if len(ports) != 0 {
-			// Removes the white space from the port
-			preparedPort, err := input.PreparePort(ports)
-			if err != nil {
-				fmt.Println("Error occured: ", err)
-			}
-
-			portList = append(portList, preparedPort)
-		}
-
-		// Checks if the ports are provided as a list
-		if len(ports) != 0 && strings.Contains(ports, ",") {
 			// Loops over each of the comma separated ports (also handles a single port)
 			for _, port := range strings.Split(ports, ",") {
 				// Removes the white space from the port
@@ -137,6 +127,13 @@ var scanCmd = &cobra.Command{
 
 				portList = append(portList, preparedPort)
 			}
+		}
+
+		// Randomises port order if stealth scan is enabled
+		if stealthScan {
+			rand.Shuffle(len(portList), func(i, j int) {
+				portList[i], portList[j] = portList[j], portList[i]
+			})
 		}
 
 		// Only shows silent UDP ports when specific ports were requested
@@ -161,7 +158,7 @@ func init() {
 	scanCmd.Flags().BoolVar(&scanAll, "all", false, "Scans all ports for banners")
 
 	// Adds the stealth scan flag
-	scanCmd.Flags().BoolVar(&stealthScan, "all", false, "Randomises the scan order")
+	scanCmd.Flags().BoolVar(&stealthScan, "stealth", false, "Randomises the scan order")
 
 	// Adds the command to the root command
 	rootCmd.AddCommand(scanCmd)
